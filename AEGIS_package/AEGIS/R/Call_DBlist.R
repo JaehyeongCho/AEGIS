@@ -1,13 +1,11 @@
-## Call.DBlist -> Call.DB
-
-Call.DBlist<-function(ip, usr, pw){
+Call.DB<-function(ip, usr, pw){
   DatabaseConnector::connection<-connect(connectionDetails)
   sql <- "SELECT name FROM sys.databases"
   sql <- renderSql(sql)$sql
   sql <- translateSql(sql,
                       targetDialect=connectionDetails$dbms)$sql
   DBlist <- querySql(connection, sql)
-  return(DBlist)
+  return(DB.name)
 }
 
 ###########

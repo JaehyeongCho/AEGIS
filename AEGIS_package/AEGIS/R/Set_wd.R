@@ -1,10 +1,11 @@
-Set.wd<-function(){
-  if(exists("~/AEGIS")==FALSE){
-    dir.create("~/AEGIS", showWarnings = FALSE)
-    setwd("~/AEGIS")
+Set.wd<-function(DB.name){
+  wd<-paste0("~/AEGIS/",DB.name)
+  if(exists(wd)==FALSE){
+    dir.create(wd, showWarnings = FALSE)
+    setwd(wd)
   }
   else
   {
-    setwd("~/AEGIS")
+    setwd(wd)
   }
 }

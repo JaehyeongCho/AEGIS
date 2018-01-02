@@ -15,5 +15,5 @@ Imports:
   SqlRender (>= 1.1.1),
   OhdsiRTools (>= 1.1.2),
   DatabaseConnector (>= 1.11.4),
-  
+  lazyeval (>= 0.2.1)
   

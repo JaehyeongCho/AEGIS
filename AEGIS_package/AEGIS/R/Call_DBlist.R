@@ -1,26 +1,12 @@
-Call.DB<-function(ip, usr, pw){
-  DatabaseConnector::connection<-connect(connectionDetails)
-  sql <- "SELECT name FROM sys.databases"
-  sql <- renderSql(sql)$sql
-  sql <- translateSql(sql,
-                      targetDialect=connectionDetails$dbms)$sql
-  DBlist <- querySql(connection, sql)
-  return(DB.name)
+Call.DB<-function(server, ip, usr, pw, schema, targettab="cohort", cdmVersion="5"){
+connectionDetails<<-DatabaseConnector::createConnectionDetails(dbms=server,
+                                                               server=ip,
+                                                               schema=schema,
+                                                               user=usr,
+                                                               password=pw)
+schema_dbo <- paste0(schema,".dbo")
+cdmDatabaseSchema <- schema_dbo
+targettab <- targettab
+cdmVersion <- cdmVersion
+connection <<- DatabaseConnector::connect(connectionDetails)
 }
-
-###########
-
-connectionDetails<<-DatabaseConnector::createConnectionDetails(dbms="sql server",
-                                                               server="128.1.99.53",
-                                                               schema="Camel_db",
-                                                               user="jhcho",
-                                                               password="Survival12")
-connection<<-DatabaseConnector::connect(connectionDetails)
-
-
-
-cdmDatabaseSchema <<- schema_dbo
-targettab <<- "cohort"
-cdmVersion <<- "5"
-
-

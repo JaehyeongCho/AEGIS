@@ -127,9 +127,10 @@ shinyApp(
     enddt <- input$dateRange[2]
     distinct <- input$distinct
 
-
+    #수정 필요
     db_conn <- eventReactive(input$DBlist,{
-      DB.name <- Call.DB(ip, usr, pw)
+      #DB.name <- Call.DB(server, ip, usr, pw, schema)
+      Call.DB(server, ip, usr, pw, schema)
     })
 
 
@@ -168,7 +169,7 @@ shinyApp(
       ip <- input$ip
       usr <- input$usr
       pw <- input$pw
-      gis.level <- input$gis.level
+      GIS.level <- input$GIS.level
       ocdi <- input$ocdi
       tcdi <- input$tcdi
       fraction<-as.numeric(input$fraction)
@@ -178,28 +179,21 @@ shinyApp(
 
 
       ##Load cohort
-      gis.cohort <- gis.extraction(input$gis.distribution)
+      GIS.cohort <<- GIS.extraction(input$GIS.distribution, )
 
       ##load GADM & getting map
-      #gadm <- getData('GADM', country='KOR', level=gis.level)
-      map <- GIS.background(gadm@bbox)
+      GADM_list <<- GIS.download(country=country, MAX.level=MAX.level)
+      map <- GIS.background(GADM_list[[1]]@bbox)
 
-      ##tolower column names
-      colnames(cohort) <- tolower(colnames(cohort))
-
-      ##remove NA
-      countdf <- na.omit(cohort)
-
-      ##cohort extraction by gis.level
-      GIS.calc1(path$MAX.level, input$GIS.distribution)
 
       ##polygon data & proportion calc
-
+      GIS.calc1(path$MAX.level, input$GIS.distribution)
+      GIS.calc2
 
 
       #plotting on kormap
 
-      if( input$stat == 0){
+      if( input$stat == 0){j
         if(input$level == 1){
           mapdf$id_1 <- mapdf$id
           mapdf <- join(mapdf,countdf_level,by = "id_1", type="inner")

@@ -1,26 +1,13 @@
-schema <- "NHIS_NSC"
-targettab <- "cohort"
-startdt <- "2002-01-01"
-enddt <- "2013-12-31"
-distinct <- ""
-tcdi <- "403"
-ocdi <- "438"
-
-GIS.extraction<-function(connectionDetails, schema, targettab="cohort", startdt, enddt, distinct,
+GIS.extraction<-function(GIS.distribution, schema, targettab="cohort", startdt, enddt, distinct,
                          tcdi, ocdi){
-  connectionDetails <- connectionDetails
-  connection <- DatabaseConnector::connect(connectionDetails)
-  tcdi <- tcdi
-  ocdi <- ocdi
   cdmDatabaseSchema <- paste0(schema,".dbo")
   targettab <- targettab
   cdmVersion <- "5"
-  #Sys.setlocale(category = "LC_ALL", locale = "us")
-  Sys.setlocale(category="LC_CTYPE", locale="C")
+  Sys.setlocale(category = "LC_ALL", locale = "us")
 
-
+  if(GIS.distribution == "count"){
     sql <-"
-    SELECT o.gadm_id, count(o.subject_id) as count_target --GADM_ID, count
+    SELECT o.gadm_id, count(o.subject_id) as outcome_count --GADM_ID, count
     FROM
     (
     SELECT @distinct a.subject_id, a.cohort_definition_id, a.cohort_start_date, a.cohort_end_date, b.location_id, c.fact_id_1 as gadm_id
@@ -44,11 +31,13 @@ GIS.extraction<-function(connectionDetails, schema, targettab="cohort", startdt,
                                 tcdi=tcdi)$sql
     sql <- SqlRender::translateSql(sql,
                                    targetDialect=connectionDetails$dbms)$sql
-    cohort_count <- DatabaseConnector::querySql(connection, sql)
-    colnames(cohort_count) <- tolower(colnames(cohort_count))
-    countdf_count <- na.omit(cohort_count)
-
-
+    cohort <- DatabaseConnector::querySql(connection, sql)
+    colnames(cohort) <- tolower(colnames(cohort))
+    countdf <- na.omit(cohort)
+    return(cohort)
+  }
+  else
+  {
     sql <-"
     SELECT t.cohort_definition_id, t.subject_id, t.cohort_start_date, t.cohort_end_date
     INTO #target_cohort
@@ -91,7 +80,7 @@ GIS.extraction<-function(connectionDetails, schema, targettab="cohort", startdt,
     WHERE t.cohort_start_date <= o.cohort_start_date
     AND t.cohort_end_date >= o.cohort_start_date
 
-    SELECT a.gadm_id, a.target_count as proportion_target, b.outcome_count as proportion_outcome
+    SELECT a.gadm_id, a.target_count, b.outcome_count
     FROM
     (
     SELECT c.fact_id_1 AS gadm_id, count(a.subject_id) AS target_count
@@ -126,29 +115,8 @@ GIS.extraction<-function(connectionDetails, schema, targettab="cohort", startdt,
                                 ocdi=ocdi)$sql
     sql <- SqlRender::translateSql(sql,
                                    targetDialect=connectionDetails$dbms)$sql
-    cohort_proportion <- DatabaseConnector::querySql(connection, sql)
-    colnames(cohort_proportion) <- tolower(colnames(cohort_proportion))
-    countdf <- na.omit(cohort_proportion)
-
-    cohort <- dplyr::left_join(cohort_count, cohort_proportion, by = c("gadm_id", "gadm_id"))
-    cohort$proportion <- cohort$proportion_outcome / cohort$proportion_target
+    cohort <- DatabaseConnector::querySql(connection, sql)
+    colnames(cohort) <- tolower(colnames(cohort))
+    countdf <- na.omit(cohort)
     return(cohort)
-  }
-
-
-
-cohort <- GIS.extraction(connectionDetails, schema, targettab="cohort", startdt, enddt, distinct,
-                         tcdi, ocdi)
-
-
-
-
-connectionDetails <- DatabaseConnector::createConnectionDetails(dbms="sql server",
-                                                                server="128.1.99.53",
-                                                                schema="NHIS_NSC",
-                                                                user="JHCho",
-                                                                password="Survival12")
-
-
-head(cohort)
-
+  }}

@@ -1,0 +1,61 @@
+DBMS:
+sql server
+
+Error:
+com.microsoft.sqlserver.jdbc.SQLServerException: 개체 이름 'NHIS_NSC_OHDSI_v2_2_0_15ho.dbo.person'이(가) 잘못되었습니다.
+
+SQL:
+
+        SELECT o.ID_0, o.ID_1, o.ID_2, count(o.subject_id) as outcome_count
+        FROM 
+        (
+        SELECT distinct a.subject_id, a.cohort_definition_id, a.cohort_start_date, a.cohort_end_date, b.location_id, c.ID_0, c.ID_1, c.ID_2  
+        FROM NHIS_NSC_OHDSI_v2_2_0_15ho.dbo.cohort a 
+        LEFT JOIN NHIS_NSC_OHDSI_v2_2_0_15ho.dbo.person b 
+        ON a.subject_id = b.person_id 
+        LEFT JOIN gadm.dbo.gadm c 
+        ON b.location_id = c.location_id
+        WHERE a.cohort_definition_id = 404
+        )
+        o
+        where '2002-01-01' <= o.cohort_start_date
+        AND '2013-12-31' >= o.cohort_end_date
+        GROUP BY o.ID_2, o.ID_1, o.ID_0
+        
+
+R version:
+R version 3.3.2 (2016-10-31)
+
+Platform:
+x86_64-w64-mingw32
+
+Attached base packages:
+- stats
+- graphics
+- grDevices
+- utils
+- datasets
+- methods
+- base
+
+Other attached packages:
+- shinydashboard (0.6.1)
+- DatabaseConnector (2.0.2)
+- SqlRender (1.4.6)
+- shinyjs (0.9.1)
+- pkgconfig (2.0.1)
+- bindrcpp (0.2)
+- shiny (1.0.5)
+- sqldf (0.4-11)
+- RSQLite (2.0)
+- gsubfn (0.6-6)
+- proto (1.0.0)
+- plyr (1.8.4)
+- dplyr (0.7.4)
+- ggmap (2.6.1)
+- ggplot2 (2.2.1)
+- mapproj (1.2-5)
+- mapdata (2.2-6)
+- maps (3.2.0)
+- raster (2.5-8)
+- sp (1.2-4)

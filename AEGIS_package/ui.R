@@ -1,4 +1,22 @@
+
+
 ##install&require packages
+packages<-function(x){
+  x<-as.character(match.call()[[2]])
+  if (!require(x,character.only=TRUE)){
+    install.packages(pkgs=x,repos="http://cran.r-project.org")
+    require(x,character.only=TRUE)
+  }
+  else
+  {
+    require(x,character.only=TRUE)
+  }
+}
+
+options(expressions=500000)
+setTimeLimit()
+
+packages(AEGIS)
 packages(raster)
 packages(maps)
 packages(mapdata)
@@ -15,32 +33,16 @@ packages(SqlRender)
 packages(DatabaseConnector)
 packages(shinydashboard)
 
-
-packages<-function(x){
-  x<-as.character(match.call()[[2]])
-  if (!require(x,character.only=TRUE)){
-    install.packages(pkgs=x,repos="http://cran.r-project.org")
-    require(x,character.only=TRUE)
-  }
-  else
-  {
-    require(x,character.only=TRUE)
-  }
-}
-
-options(expressions=500000)
-setTimeLimit()
-
-
+Sys.setlocale(category = "LC_ALL", locale = "us")
 
 
 
 shinyApp(
-
   # Define UI for dataset viewer application
   ui <- dashboardPage(
     dashboardHeader(title = "AEGIS"),
     dashboardSidebar(sidebarMenu(menuItem("DB Load",tabName= "db" ),
+                                 menuItem("table", tabName = "table" ),
                                  menuItem("control", tabName = "control" ),
                                  menuItem("Export",tabName = "export" )
 
@@ -52,13 +54,14 @@ shinyApp(
                 titlePanel("Database Load"),
                 sidebarPanel(
                   textInput("ip","IP","")
+                  ,textInput("schema","SCHEMA","")
                   ,textInput("usr","USER","")
                   ,passwordInput("pw","PASSWORD","")
                   #input text to db information
                   ,actionButton("db_load","Load DB")
-                  ,hr()
-                  ,uiOutput("db_conn")
-                  ,actionButton("cohort_listup","Select DB")
+                  #,hr()
+                  #,uiOutput("db_conn")
+                  #,actionButton("cohort_load","Load cohort")
                 ),
                 mainPanel(
                   verbatimTextOutput("txt"),
@@ -66,22 +69,35 @@ shinyApp(
                 )
               )
       ),
-      tabItem(tabName = "control",
+      tabItem(tabName = "table",
               fluidRow(
-                titlePanel("Plot control"),
+                titlePanel("table"),
                 sidebarPanel(
                   uiOutput("cohort_tcdi")
                   ,uiOutput("cohort_ocdi")
                   ,hr()
                   ,dateRangeInput(inputId = "dateRange", label = "Select Windows",  start = "2002-01-01", end = "2013-12-31")
                   ,hr()
-                  ,radioButtons("GIS.level","Administrative level",choices = c("Level 1" = 0, "Level 2" = 1, "Level 3" = 2),selected = 1)
+                  ,uiOutput("country_list")
+                  ,actionButton("Submit_table","Submit")
+                  ),
+                mainPanel(
+                  #verbatimTextOutput("txt"),
+                  #tableOutput("view")
+                )
+              )
+      ),
+      tabItem(tabName = "control",
+              fluidRow(
+                titlePanel("Plot control"),
+                sidebarPanel(
+                  radioButtons("GIS.level","Administrative level",choices = c("Level 1" = 0, "Level 2" = 1, "Level 3" = 2),selected = 1)
                   ,radioButtons("GIS.distribution","Select distribution options", choices = c("Count of the target cohort (n)" = "count","Propotion" = "proportion", "Standardized Incidence Ratio"="SIR"),selected = "count")
                   ,radioButtons("distinct","Select distinct options", c("Yes" = "distinct","No" = "" ),inline= TRUE)
                   ,textInput("fraction","fraction (only for proportion)",100)
                   ,textInput("title","title","")
                   ,textInput("legend","legend","")
-                  ,actionButton("Submit","Submit") #Draw plot button
+                  ,actionButton("Submit_plot","Submit") #Draw plot button
                 ),
                 mainPanel(
                   verbatimTextOutput("test")
@@ -115,71 +131,73 @@ shinyApp(
 
   server <- function(input, output,session){
 
-    schema <- input$db
-    ip <- input$ip
-    usr <- input$usr
-    pw <- input$pw
-    GIS.level <- input$GIS.level
-    ocdi <- input$ocdi
-    tcdi <- input$tcdi
-    fraction<-as.numeric(input$fraction)
-    startdt <- input$dateRange[1]
-    enddt <- input$dateRange[2]
-    distinct <- input$distinct
+
 
     #수정 필요
-    db_conn <- eventReactive(input$DBlist,{
-      #DB.name <- Call.DB(server, ip, usr, pw, schema)
-      Call.DB(server, ip, usr, pw, schema)
+
+    cohort_listup <- eventReactive(input$db_load, {
+      connectionDetails <- DatabaseConnector::createConnectionDetails(dbms="sql server",
+                                                                      server=input$ip,
+                                                                      schema=input$schema,
+                                                                      user=input$usr,
+                                                                      password=input$pw)
+      connection <- DatabaseConnector::connect(connectionDetails)
+      cohort_list <- Call.Cohortlist(connectionDetails, connection, input$schema)
+      Set.wd(input$schema)
     })
 
 
-    cohort_listup <- eventReactive(input$Cohortlist,{
-      Cohortlist <- Call.Cohortlist(ip, usr, pw, schema)
-    })
-
-
-
-    output$db_conn <- renderUI({
-      db_list <- db_conn()
-      selectizeInput("db", "Select DB", choices = db_list[,1])
+    output$cohort_tcdi <- renderUI({
+      cohort_list <- cohort_listup()
+      selectInput("tcdi", "Select target cohort", choices = cohort_list[,1])
     })
 
 
     output$cohort_ocdi <- renderUI({
       cohort_list <- cohort_listup()
-      selectInput("ocdi", "Select outcome cohort", choices = Cohortlist[,1])
+      selectInput("ocdi", "Select outcome cohort", choices = cohort_list[,1])
     })
 
-    output$cohort_tcdi <- renderUI({
-      cohort_list <- cohort_listup()
-      selectInput("tcdi", "Select target cohort", choices = Cohortlist[,1])
+
+    output$country_list <- renderUI({
+      country_list <- GIS.countrylist()
+      selectInput("country", "Select country", choices = country_list[,1])
     })
 
     output$plot <- renderPlot ({
       draw_plot()
     }, width = 1024, height = 800, res = 100)
 
+    GIS.table <- reactive(input$Submit_table{
+      country_list <- GIS.countrylist()
+      country <- input$country
+      MAX.level <- country_list[country_list$NAME==country,3]
+      GADM <- GIS.download(country, MAX.level)
+
+
+    })
+
 
     #######################################
 
-    draw_plot <- eventReactive(input$Submit,{
+    draw_plot <- eventReactive(input$Submit_plot,{
 
-      schema <- input$db
-      ip <- input$ip
-      usr <- input$usr
-      pw <- input$pw
-      GIS.level <- input$GIS.level
-      ocdi <- input$ocdi
-      tcdi <- input$tcdi
-      fraction<-as.numeric(input$fraction)
-      startdt <- input$dateRange[1]
-      enddt <- input$dateRange[2]
-      distinct <- input$distinct
+      #schema <- input$db
+      #ip <- input$ip
+      #usr <- input$usr
+      #pw <- input$pw
+      #GIS.level <- input$GIS.level
+      #ocdi <- input$ocdi
+      #tcdi <- input$tcdi
+      #fraction<-as.numeric(input$fraction)
+      #startdt <- input$dateRange[1]
+      #enddt <- input$dateRange[2]
+      #distinct <- input$distinct
+
 
 
       ##Load cohort
-      GIS.cohort <<- GIS.extraction(input$GIS.distribution, )
+      GIS.cohort <- GIS.extraction(input$GIS.distribution)
 
       ##load GADM & getting map
       GADM_list <<- GIS.download(country=country, MAX.level=MAX.level)

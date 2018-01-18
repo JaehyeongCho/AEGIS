@@ -15,4 +15,3 @@ for(i in 1:length(countdf_level$id)){
     mapdf <- rbind(mapdf, tempdf)
   }
 }
-

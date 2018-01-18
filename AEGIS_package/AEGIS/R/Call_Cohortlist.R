@@ -1,17 +1,11 @@
-Call.Cohortlist<-function(ip, usr, pw, schema){
-  schema_dbo <- paste0(schema,'.dbo')
-
-  connectionDetails<<-DatabaseConnector::createConnectionDetails(dbms="sql server",
-                                                                 server=ip,
-                                                                 schema=schema,
-                                                                 user=usr,
-                                                                 password=pw)
-  cdmDatabaseSchema <<- schema_dbo
-  targettab <<- "cohort"
-  cdmVersion <<- "5"
-  connection<<-DatabaseConnector::connect(connectionDetails)
+Call.Cohortlist<-function(connectionDetails, connection, schema, targettab="cohort", cdmVersion="5"){
+  connectionDetails <-connectionDetails
+  connection <- connection
 
   sql <- "SELECT distinct cohort_definition_id FROM @cdmDatabaseSchema.@targettab order by cohort_definition_id"
+  cdmDatabaseSchema <- paste0(schema,".dbo")
+  targettab <- targettab
+  cdmVersion <- cdmVersion
   sql <- SqlRender::renderSql(sql,
                               cdmDatabaseSchema=cdmDatabaseSchema,
                               targettab=targettab)$sql
